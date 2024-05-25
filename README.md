@@ -1,2 +1,2 @@
-# pluto
-Adalm Pluto projects and iio wrapper 
+# Description
+Messing around with the Adalm Pluto.
