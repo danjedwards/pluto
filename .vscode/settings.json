@@ -15,5 +15,15 @@
                 "justMyCode": false
             }
         ]
-    }
+    },
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/dan/Desktop/pluto/",
+            "binaryPath": "/home/dan/Desktop/pluto/build/debug",
+            "binaryArgs": [
+                "--addr",
+                "tcp://127.0.0.1:5555"
+            ]
+        }
+    ]
 }
