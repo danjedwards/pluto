@@ -18,20 +18,25 @@ from PyQt5.QtWidgets import (
     QPushButton
 )
 
+FS = 30719999
+FULL_SCALE = 100.
+
 class ZmqWorker(QObject):
     data = pyqtSignal(np.ndarray)
     
-    def __init__(self, addr):
+    def __init__(self, addr, dtype):
         super().__init__()
         self.ctx    = zmq.Context()
         self.socket = self.ctx.socket(zmq.SUB)
         self.socket.connect(addr)
         self.socket.setsockopt(zmq.SUBSCRIBE, b"")
 
+        self.dtype = dtype
+
     def run(self):
         while True:
             buf = self.socket.recv()
-            self.data.emit(np.frombuffer(buf, dtype=np.float64))
+            self.data.emit(np.frombuffer(buf, dtype=self.dtype))
 
 class ZmqWorkerWrapper(QObject):
     data = pyqtSignal(np.ndarray)
@@ -53,24 +58,51 @@ class TimeDomainPlot(QWidget):
     def __init__(self):
         super().__init__()
 
-        # Vars
-        self.plot = None
-
         # Widgets
-        self.line_graph = pg.PlotWidget()
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.setTitle("Time Domain")
+        self.plot_widget.setLabel("left", "Amplitude")
+        self.plot_widget.setLabel("bottom", "Time (s)")
+        
+        self.plot_item  = None
 
         # Layout
         layout = QVBoxLayout()
-        layout.addWidget(self.line_graph)
+        layout.addWidget(self.plot_widget)
         self.setLayout(layout)
 
-    def set_data(self, y):
-        t = np.linspace(0, y.shape[0], y.shape[0])
-        if self.plot is None:
-            self.plot = self.line_graph.plotItem.plot(t, y)
+    def set_data(self, iq):
+        y = (iq.real + iq.imag) / 2
+        t = np.linspace(0, y.shape[0] / FS, y.shape[0])
+        if self.plot_item is None:
+            self.plot_item = self.plot_widget.plotItem.plot(t, y)
         else:
-            self.plot.setData(t, y)
+            self.plot_item.setData(t, y)
 
+class FreqDomainPlot(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        # Widgets
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.setTitle("Freq Domain")
+        self.plot_widget.setLabel("left", "Amplitude")
+        self.plot_widget.setLabel("bottom", "Frequency")
+        self.plot_widget.getPlotItem().setLogMode(y=True)
+        
+        self.plot_item  = None
+
+        # Layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.plot_widget)
+        self.setLayout(layout)
+
+    def set_data(self, pxx):
+        f = np.linspace(-FS/2, FS/2, pxx.shape[0])
+        if self.plot_item is None:
+            self.plot_item = self.plot_widget.plotItem.plot(f, pxx)
+        else:
+            self.plot_item.setData(f, pxx)
 
 class PlutoGui(QMainWindow):
     def __init__(self):
@@ -80,20 +112,24 @@ class PlutoGui(QMainWindow):
         self.setWindowTitle("Pluto Gui")
         
         # Workers
-        self.recv_worker = ZmqWorkerWrapper(ZmqWorker("tcp://localhost:5555"))
-        self.recv_worker.start()
+        self.time_domain_worker = ZmqWorkerWrapper(ZmqWorker("tcp://localhost:5555", np.complex128))
+        self.time_domain_worker.start()
+
+        self.freq_domain_worker = ZmqWorkerWrapper(ZmqWorker("tcp://localhost:5556", np.float64))
+        self.freq_domain_worker.start()
 
         # Widgets
-        graph = TimeDomainPlot()
-        btn   = QPushButton("Dummy Button")
+        time_domain_plot = TimeDomainPlot()
+        freq_domain_plot = FreqDomainPlot()
 
         # Signals and Slots
-        self.recv_worker.data.connect(graph.set_data)
+        self.time_domain_worker.data.connect(time_domain_plot.set_data)
+        self.freq_domain_worker.data.connect(freq_domain_plot.set_data)
 
         # Layout
         layout = QVBoxLayout()
-        layout.addWidget(graph)
-        layout.addWidget(btn)
+        layout.addWidget(time_domain_plot)
+        layout.addWidget(freq_domain_plot)
         
         layout_widget = QWidget()
         layout_widget.setLayout(layout)
