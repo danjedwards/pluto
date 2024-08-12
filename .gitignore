@@ -1,4 +1,5 @@
 libiio/
 iio-oscilloscope/
 pyadi-iio/
+libiio-0.25/
 build/

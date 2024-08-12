@@ -2,7 +2,6 @@ import zmq
 import time
 import numpy as np
 
-
 def pub(addr):
     ctx = zmq.Context()
     socket = ctx.socket(zmq.PUB)
