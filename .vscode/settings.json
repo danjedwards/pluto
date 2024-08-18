@@ -1,7 +1,9 @@
 {
     "files.associations": {
         "stdio.h": "c",
-        "iio.h": "c"
+        "iio.h": "c",
+        "math.h": "c",
+        "stdbool.h": "c"
     },
     "launch": {
         "version": "0.2.0",
@@ -21,9 +23,26 @@
             "cwd": "/home/dan/Desktop/pluto/",
             "binaryPath": "/home/dan/Desktop/pluto/build/debug",
             "binaryArgs": [
-                "--uri", "ip:pluto.local",
-                "--addr", "tcp://127.0.0.1:5555",
+                "--uri",
+                "ip:pluto.local",
+                "--addr",
+                "tcp://127.0.0.1:5555"
             ]
+        },
+        {
+            "cwd": "/home/dan/Desktop/pluto/build",
+            "binaryPath": "/home/dan/Desktop/pluto/build/dsp.c",
+            "binaryArgs": []
+        },
+        {
+            "cwd": "/home/dan/Desktop/pluto/build",
+            "binaryPath": "/home/dan/Desktop/pluto/build/dsp",
+            "binaryArgs": []
+        },
+        {
+            "cwd": "/home/dan/Desktop/pluto/build",
+            "binaryPath": "/home/dan/Desktop/pluto/build/debug",
+            "binaryArgs": []
         }
     ]
 }

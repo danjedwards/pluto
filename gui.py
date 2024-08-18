@@ -2,6 +2,8 @@ import pyqtgraph as pg
 import zmq
 import numpy as np
 
+from scipy import signal
+
 from PyQt5.QtCore import (
     QObject,
     QThread,
@@ -72,7 +74,8 @@ class TimeDomainPlot(QWidget):
         self.setLayout(layout)
 
     def set_data(self, iq):
-        y = (iq.real + iq.imag) / 2
+        # y = (iq.real + iq.imag) / 2
+        y = iq
         t = np.linspace(0, y.shape[0] / FS, y.shape[0])
         if self.plot_item is None:
             self.plot_item = self.plot_widget.plotItem.plot(t, y)
@@ -97,12 +100,13 @@ class FreqDomainPlot(QWidget):
         layout.addWidget(self.plot_widget)
         self.setLayout(layout)
 
-    def set_data(self, pxx):
-        f = np.linspace(-FS/2, FS/2, pxx.shape[0])
+    def set_data(self, iq):
+        # The plan is to move all dsp to the C program.
+        f, Pxx_den = signal.periodogram(iq, FS)
         if self.plot_item is None:
-            self.plot_item = self.plot_widget.plotItem.plot(f, pxx)
+            self.plot_item = self.plot_widget.plotItem.plot(f, Pxx_den)
         else:
-            self.plot_item.setData(f, pxx)
+            self.plot_item.setData(f, Pxx_den)
 
 class PlutoGui(QMainWindow):
     def __init__(self):
@@ -112,19 +116,16 @@ class PlutoGui(QMainWindow):
         self.setWindowTitle("Pluto Gui")
         
         # Workers
-        self.time_domain_worker = ZmqWorkerWrapper(ZmqWorker("tcp://localhost:5555", np.complex128))
-        self.time_domain_worker.start()
-
-        self.freq_domain_worker = ZmqWorkerWrapper(ZmqWorker("tcp://localhost:5556", np.float64))
-        self.freq_domain_worker.start()
+        self.zmq_worker = ZmqWorkerWrapper(ZmqWorker("tcp://localhost:5556", np.int16))
+        self.zmq_worker.start()
 
         # Widgets
         time_domain_plot = TimeDomainPlot()
         freq_domain_plot = FreqDomainPlot()
 
         # Signals and Slots
-        self.time_domain_worker.data.connect(time_domain_plot.set_data)
-        self.freq_domain_worker.data.connect(freq_domain_plot.set_data)
+        self.zmq_worker.data.connect(time_domain_plot.set_data)
+        self.zmq_worker.data.connect(freq_domain_plot.set_data)
 
         # Layout
         layout = QVBoxLayout()
