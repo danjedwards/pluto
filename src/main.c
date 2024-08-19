@@ -140,23 +140,55 @@ int main(int argc, char **argv)
     /////////////////////////////////////////////////////////////////////////////////////
 
     size_t ntx = 0, nrx = 0;
+    int16_t *rx_buf, *tx_buf;
 
     printf("* Starting IO streaming (press CTRL+C to cancel)\n");
     while (!stop)
     {
-        // Write tx data to the pluto's buffer
-        ntx += pluto_tx(&pluto);
+        /////////////////////////////////////////////////////////////////////////////////////
+        // TX
+        /////////////////////////////////////////////////////////////////////////////////////
+        // Get buffer length and create buffer of the same size
+        ntx = pluto_get_tx_buf_len(&pluto);
+        tx_buf = (int16_t *)malloc(ntx);
+        printf("\t transmitting %ld bytes", ntx);
 
-        // Get rx data
-        nrx += pluto_rx(&pluto);
+        // Dsp stuff
+        int16_sine_wave(txcfg.fs_hz, 50000, tx_buf, ntx / 2); // funky RX signal. Perhaps it is a sampling frequency thing like with the python code??
 
-        printf("\tRX %8.2f MSmp, TX %8.2f MSmp\n", nrx / 1e6, ntx / 1e6);
-
-        // dsp stuff
+        // Push bytes to tx buffer
+        pluto_tx(&pluto, tx_buf);
 
         // Send Rx Data over zmq socket
-        // zmq_send(publisher, 0, 0, 0);
-        sleep(1);
+        // if (tx_buf)
+        //     zmq_send(publisher, (const void *)tx_buf, ntx, 0);
+
+        /////////////////////////////////////////////////////////////////////////////////////
+        // RX
+        /////////////////////////////////////////////////////////////////////////////////////
+        // Get buffer length and create buffer of the same size
+        nrx = pluto_get_rx_buf_len(&pluto);
+        rx_buf = (int16_t *)malloc(nrx);
+        printf("\t RX received %ld bytes\n", nrx);
+
+        // Fill buffer
+        pluto_rx(&pluto, rx_buf);
+
+        // Dsp stuff
+
+        // Send Rx Data over zmq socket
+        if (rx_buf)
+            zmq_send(publisher, (const void *)rx_buf, nrx, 0);
+
+        /////////////////////////////////////////////////////////////////////////////////////
+        // Clean Up
+        /////////////////////////////////////////////////////////////////////////////////////
+        // Free buffers
+        free(tx_buf);
+        free(rx_buf);
+
+        // Delay
+        usleep(200 * 1e3);
     }
 
     pluto_shutdown(&pluto);

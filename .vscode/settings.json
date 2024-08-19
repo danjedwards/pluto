@@ -3,7 +3,12 @@
         "stdio.h": "c",
         "iio.h": "c",
         "math.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "forward_list": "c",
+        "string": "c",
+        "functional": "c",
+        "type_traits": "c",
+        "ratio": "c"
     },
     "launch": {
         "version": "0.2.0",

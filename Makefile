@@ -5,7 +5,6 @@ SRC_DIR   = ./src
 
 RELEASE   = $(BUILD_DIR)/main
 DEBUG     = $(BUILD_DIR)/debug
-DSP_TEST  = $(BUILD_DIR)/dsp_test_exe
 
 REL_OBJ_DIR = $(BUILD_DIR)/release_obj
 DBG_OBJ_DIR = $(BUILD_DIR)/debug_obj
@@ -25,9 +24,6 @@ release: $(ORDERED_OBJECTS)
 
 debug: $(DEBUG_OBJECTS)
 	$(CC) -o $(DEBUG) $(DEBUG_OBJECTS) $(LINKER_FLAGS) $(DEBUG_FLAGS)
-
-dsp_test: $(BUILD_DIR)/dsp.o
-	$(CC) -o $(DSP_TEST) $(BUILD_DIR)/dsp.o $(LINKER_FLAGS) $(DEBUG_FLAGS) -DDSP_TARGET
 
 $(REL_OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(DEPS)
 	@mkdir -p $(REL_OBJ_DIR)

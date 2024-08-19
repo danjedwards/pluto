@@ -31,26 +31,22 @@ static void errchk(int v, const char *what) // <------ FIX ME!!!
     }
 }
 
-/* write attribute: long long int */
 static void wr_ch_lli(struct iio_channel *chn, const char *what, long long val)
 {
     errchk(iio_channel_attr_write_longlong(chn, what, val), what);
 }
 
-/* write attribute: string */
 static void wr_ch_str(struct iio_channel *chn, const char *what, const char *str)
 {
     errchk(iio_channel_attr_write(chn, what, str), what);
 }
 
-/* helper function generating channel names */
 static char *get_ch_name(const char *type, int id)
 {
     snprintf(tmpstr, sizeof(tmpstr), "%s%d", type, id);
     return tmpstr;
 }
 
-/* returns ad9361 phy device */
 static struct iio_device *get_ad9361_phy(struct iio_context *ctx)
 {
     struct iio_device *dev = iio_context_find_device(ctx, "ad9361-phy");
@@ -58,7 +54,6 @@ static struct iio_device *get_ad9361_phy(struct iio_context *ctx)
     return dev;
 }
 
-/* finds AD9361 streaming IIO devices */
 static bool get_ad9361_stream_dev(struct iio_context *ctx, enum iodev d, struct iio_device **dev)
 {
     switch (d)
@@ -75,7 +70,6 @@ static bool get_ad9361_stream_dev(struct iio_context *ctx, enum iodev d, struct 
     }
 }
 
-/* finds AD9361 streaming IIO channels */
 static bool get_ad9361_stream_ch(enum iodev d, struct iio_device *dev, int chid, struct iio_channel **chn)
 {
     *chn = iio_device_find_channel(dev, get_ch_name("voltage", chid), d == TX);
@@ -84,7 +78,6 @@ static bool get_ad9361_stream_ch(enum iodev d, struct iio_device *dev, int chid,
     return *chn != NULL;
 }
 
-/* finds AD9361 phy IIO configuration channel with id chid */
 static bool get_phy_chan(struct iio_context *ctx, enum iodev d, int chid, struct iio_channel **chn)
 {
     switch (d)
@@ -101,7 +94,6 @@ static bool get_phy_chan(struct iio_context *ctx, enum iodev d, int chid, struct
     }
 }
 
-/* finds AD9361 local oscillator IIO configuration channels */
 static bool get_lo_chan(struct iio_context *ctx, enum iodev d, struct iio_channel **chn)
 {
     switch (d)
@@ -119,7 +111,6 @@ static bool get_lo_chan(struct iio_context *ctx, enum iodev d, struct iio_channe
     }
 }
 
-/* applies streaming configuration through IIO */
 bool cfg_ad9361_streaming_ch(struct iio_context *ctx, struct stream_cfg *cfg, enum iodev type, int chid)
 {
     struct iio_channel *chn = NULL;
@@ -188,11 +179,9 @@ struct pluto_dev pluto_init(const char *ctx_uri, struct stream_cfg txcfg, struct
     return pluto;
 }
 
-size_t pluto_tx(struct pluto_dev *pluto)
+size_t pluto_get_tx_buf_len(struct pluto_dev *pluto)
 {
     ssize_t nbytes_tx;
-    char *p_dat, *p_end;
-    ptrdiff_t p_inc;
 
     // Schedule TX buffer
     nbytes_tx = iio_buffer_push(pluto->txbuf);
@@ -202,26 +191,30 @@ size_t pluto_tx(struct pluto_dev *pluto)
         pluto_shutdown(pluto);
     }
 
+    return nbytes_tx;
+}
+
+void pluto_tx(struct pluto_dev *pluto, int16_t *buf)
+{
+    char *p_dat, *p_end;
+    ptrdiff_t p_inc;
+    int idx = 0;
+
     // WRITE: Get pointers to TX buf and write IQ to TX buf port 0
     p_inc = iio_buffer_step(pluto->txbuf);
     p_end = iio_buffer_end(pluto->txbuf);
     for (p_dat = (char *)iio_buffer_first(pluto->txbuf, pluto->tx0_i); p_dat < p_end; p_dat += p_inc)
     {
-        // Example: fill with zeros
         // 12-bit sample needs to be MSB aligned so shift by 4
         // https://wiki.analog.com/resources/eval/user-guides/ad-fmcomms2-ebz/software/basic_iq_datafiles#binary_format
-        ((int16_t *)p_dat)[0] = 0 << 4; // Real (I)
-        ((int16_t *)p_dat)[1] = 0 << 4; // Imag (Q)
+        ((int16_t *)p_dat)[0] = buf[idx * 2] << 4;     // Real (I)
+        ((int16_t *)p_dat)[1] = buf[idx * 2 + 1] << 4; // Imag (Q)
     }
-
-    return nbytes_tx / iio_device_get_sample_size(pluto->tx);
 }
 
-size_t pluto_rx(struct pluto_dev *pluto)
+size_t pluto_get_rx_buf_len(struct pluto_dev *pluto)
 {
     ssize_t nbytes_rx;
-    char *p_dat, *p_end;
-    ptrdiff_t p_inc;
 
     // Refill RX buffer
     nbytes_rx = iio_buffer_refill(pluto->rxbuf);
@@ -231,19 +224,24 @@ size_t pluto_rx(struct pluto_dev *pluto)
         pluto_shutdown(pluto);
     }
 
+    return nbytes_rx;
+}
+
+void pluto_rx(struct pluto_dev *pluto, int16_t *buf)
+{
+    char *p_dat, *p_end;
+    ptrdiff_t p_inc;
+    int idx = 0;
+
     // READ: Get pointers to RX buf and read IQ from RX buf port 0
     p_inc = iio_buffer_step(pluto->rxbuf);
     p_end = iio_buffer_end(pluto->rxbuf);
     for (p_dat = (char *)iio_buffer_first(pluto->rxbuf, pluto->rx0_i); p_dat < p_end; p_dat += p_inc)
     {
-        // Example: swap I and Q
-        const int16_t i = ((int16_t *)p_dat)[0]; // Real (I)
-        const int16_t q = ((int16_t *)p_dat)[1]; // Imag (Q)
-        ((int16_t *)p_dat)[0] = q;
-        ((int16_t *)p_dat)[1] = i;
+        buf[idx * 2] = ((int16_t *)p_dat)[0];     // Real (I)
+        buf[idx * 2 + 1] = ((int16_t *)p_dat)[1]; // Imag (Q)
+        idx++;
     }
-
-    return nbytes_rx / iio_device_get_sample_size(pluto->rx);
 }
 
 void pluto_shutdown(struct pluto_dev *pluto)

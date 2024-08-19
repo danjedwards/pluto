@@ -34,8 +34,13 @@ struct pluto_dev
 };
 
 struct pluto_dev pluto_init(const char *ctx_uri, struct stream_cfg txcfg, struct stream_cfg rxcfg);
-size_t pluto_tx(struct pluto_dev *pluto);
-size_t pluto_rx(struct pluto_dev *pluto);
+
+size_t pluto_get_tx_buf_len(struct pluto_dev *pluto);
+void pluto_tx(struct pluto_dev *pluto, int16_t *buf);
+
+size_t pluto_get_rx_buf_len(struct pluto_dev *pluto);
+void pluto_rx(struct pluto_dev *pluto, int16_t *buf);
+
 void pluto_shutdown(struct pluto_dev *pluto);
 
 #endif

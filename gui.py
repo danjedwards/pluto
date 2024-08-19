@@ -28,12 +28,12 @@ class ZmqWorker(QObject):
     
     def __init__(self, addr, dtype):
         super().__init__()
+        self.dtype  = dtype
         self.ctx    = zmq.Context()
         self.socket = self.ctx.socket(zmq.SUB)
         self.socket.connect(addr)
         self.socket.setsockopt(zmq.SUBSCRIBE, b"")
-
-        self.dtype = dtype
+        print(f"Connected to socket on {addr}")
 
     def run(self):
         while True:
@@ -116,7 +116,7 @@ class PlutoGui(QMainWindow):
         self.setWindowTitle("Pluto Gui")
         
         # Workers
-        self.zmq_worker = ZmqWorkerWrapper(ZmqWorker("tcp://localhost:5556", np.int16))
+        self.zmq_worker = ZmqWorkerWrapper(ZmqWorker("tcp://localhost:5555", np.int16))
         self.zmq_worker.start()
 
         # Widgets
