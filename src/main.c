@@ -140,7 +140,7 @@ int main(int argc, char **argv)
     /////////////////////////////////////////////////////////////////////////////////////
 
     size_t ntx = 0, nrx = 0;
-    int16_t *rx_buf, *tx_buf;
+    int16_t rx_buf[BUFFER_SIZE * 2], tx_buf[BUFFER_SIZE * 2];
 
     printf("* Starting IO streaming (press CTRL+C to cancel)\n");
     while (!stop)
@@ -150,7 +150,6 @@ int main(int argc, char **argv)
         /////////////////////////////////////////////////////////////////////////////////////
         // Get buffer length and create buffer of the same size
         ntx = pluto_get_tx_buf_len(&pluto);
-        tx_buf = (int16_t *)malloc(ntx);
         printf("\t transmitting %ld bytes", ntx);
 
         // Dsp stuff
@@ -159,16 +158,14 @@ int main(int argc, char **argv)
         // Push bytes to tx buffer
         pluto_tx(&pluto, tx_buf);
 
-        // Send Rx Data over zmq socket
+        // Send Tx Data over zmq socket
         // if (tx_buf)
         //     zmq_send(publisher, (const void *)tx_buf, ntx, 0);
 
         /////////////////////////////////////////////////////////////////////////////////////
         // RX
         /////////////////////////////////////////////////////////////////////////////////////
-        // Get buffer length and create buffer of the same size
         nrx = pluto_get_rx_buf_len(&pluto);
-        rx_buf = (int16_t *)malloc(nrx);
         printf("\t RX received %ld bytes\n", nrx);
 
         // Fill buffer
@@ -179,16 +176,6 @@ int main(int argc, char **argv)
         // Send Rx Data over zmq socket
         if (rx_buf)
             zmq_send(publisher, (const void *)rx_buf, nrx, 0);
-
-        /////////////////////////////////////////////////////////////////////////////////////
-        // Clean Up
-        /////////////////////////////////////////////////////////////////////////////////////
-        // Free buffers
-        free(tx_buf);
-        free(rx_buf);
-
-        // Delay
-        usleep(200 * 1e3);
     }
 
     pluto_shutdown(&pluto);

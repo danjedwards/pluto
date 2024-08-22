@@ -37,8 +37,8 @@ class ZmqWorker(QObject):
 
     def run(self):
         while True:
-            buf = self.socket.recv()
-            self.data.emit(np.frombuffer(buf, dtype=self.dtype))
+            iq = np.frombuffer(self.socket.recv(), dtype=self.dtype)
+            self.data.emit(iq.reshape(2, iq.shape[0]//2))
 
 class ZmqWorkerWrapper(QObject):
     data = pyqtSignal(np.ndarray)
@@ -74,13 +74,12 @@ class TimeDomainPlot(QWidget):
         self.setLayout(layout)
 
     def set_data(self, iq):
-        # y = (iq.real + iq.imag) / 2
-        y = iq
-        t = np.linspace(0, y.shape[0] / FS, y.shape[0])
+        # Plot In-Phase channel
+        t = np.linspace(0, iq.shape[-1] / FS, iq.shape[-1])
         if self.plot_item is None:
-            self.plot_item = self.plot_widget.plotItem.plot(t, y)
+            self.plot_item = self.plot_widget.plotItem.plot(t, iq[0])
         else:
-            self.plot_item.setData(t, y)
+            self.plot_item.setData(t, iq[0])
 
 class FreqDomainPlot(QWidget):
     def __init__(self):
@@ -101,8 +100,7 @@ class FreqDomainPlot(QWidget):
         self.setLayout(layout)
 
     def set_data(self, iq):
-        # The plan is to move all dsp to the C program.
-        f, Pxx_den = signal.periodogram(iq, FS)
+        f, Pxx_den = signal.periodogram(iq[0], FS)
         if self.plot_item is None:
             self.plot_item = self.plot_widget.plotItem.plot(f, Pxx_den)
         else:

@@ -6,6 +6,8 @@
 #define MHZ(x) ((long long)(x * 1000000.0 + .5))
 #define GHZ(x) ((long long)(x * 1000000000.0 + .5))
 
+#define BUFFER_SIZE 1024 * 256
+
 enum iodev
 {
     RX,
